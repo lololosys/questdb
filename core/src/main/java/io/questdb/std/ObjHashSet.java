@@ -24,6 +24,7 @@
 
 package io.questdb.std;
 
+import io.questdb.std.str.CharSink;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.AbstractSet;
