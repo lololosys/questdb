@@ -28,6 +28,8 @@ import io.questdb.cairo.CairoException;
 import io.questdb.std.str.LPSZ;
 import io.questdb.std.str.Path;
 
+import static io.questdb.std.Files.RLIMIT_NOFILE;
+
 public class FilesFacadeImpl implements FilesFacade {
 
     public static final FilesFacade INSTANCE = new FilesFacadeImpl();
@@ -103,6 +105,11 @@ public class FilesFacadeImpl implements FilesFacade {
     @Override
     public long getLastModified(LPSZ path) {
         return Files.getLastModified(path);
+    }
+
+    @Override
+    public long getFileLimit() {
+        return Files.getRLimit(RLIMIT_NOFILE);
     }
 
     @Override

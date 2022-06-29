@@ -54,6 +54,8 @@ public interface FilesFacade {
 
     long getLastModified(LPSZ path);
 
+    long getFileLimit();
+
     int msync(long addr, long len, boolean async);
 
     int fsync(long fd);
