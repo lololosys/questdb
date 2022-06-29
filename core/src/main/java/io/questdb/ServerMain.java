@@ -47,7 +47,8 @@ import io.questdb.std.datetime.millitime.Dates;
 import io.questdb.std.str.Path;
 import sun.misc.Signal;
 
-import javax.management.*;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.*;
@@ -116,7 +117,10 @@ public class ServerMain {
             throw sce;
         }
 
-        setTotalPhysicalMemorySize(log, configuration.getCairoConfiguration().getRssMemoryLimit());
+        if (!checkOsProcessLimits(log, configuration.getCairoConfiguration(), 262_144, 100_000)) {
+            return;
+        }
+        setRssMemoryLimit(log, configuration.getCairoConfiguration().getRssMemoryLimit());
 
         final CairoConfiguration cairoConfiguration = configuration.getCairoConfiguration();
 
@@ -297,7 +301,7 @@ public class ServerMain {
         }
     }
 
-    public static void setTotalPhysicalMemorySize(Log log, long rssMemoryLimit) {
+    public static void setRssMemoryLimit(Log log, long rssMemoryLimit) {
         try {
             MBeanServer mBeanServer = ManagementFactory.getPlatformMBeanServer();
 
@@ -306,7 +310,7 @@ public class ServerMain {
             if (rssMemoryLimit == 0) {
 
                 Object freeMemSizeAttribute = mBeanServer.getAttribute(new ObjectName("java.lang", "type", "OperatingSystem"), "FreePhysicalMemorySize");
-                long freePhysicalMemorySize = (Long)freeMemSizeAttribute;
+                long freePhysicalMemorySize = (Long) freeMemSizeAttribute;
                 log.advisory().$("physical memory: ").$size(freePhysicalMemorySize).$();
 
                 Object freeSwapSizeAttribute = mBeanServer.getAttribute(new ObjectName("java.lang", "type", "OperatingSystem"), "FreeSwapSpaceSize");
@@ -332,6 +336,44 @@ public class ServerMain {
             log.debug().$(e).$();
             log.advisory().$("Will not set malloc memory limit, unable to detect runtime memory limits").$();
         }
+    }
+
+    private boolean checkOsProcessLimits(Log log, CairoConfiguration cairoConfiguration, long mapMinCount, long fileMinCount) {
+        if (!cairoConfiguration.checkOsProcessLimits()) {
+            log.advisoryW().$("os file limit checks disabled in configuration.");
+            return true;
+        }
+
+        boolean success = true;
+        long mapCount = OsUtils.getMaxMapCount(log, configuration.getCairoConfiguration().getFilesFacade());
+        if (mapCount < 0) {
+            log.advisoryW().$("cannot detect OS vm.max_map_count parameter, verification not performed");
+        } else {
+            log.advisoryW().$("vm.max_map_count=").$(mapCount).$();
+            if (mapCount < mapMinCount) {
+                // This is recommended setting in the configuration
+                log.errorW().$("FATAL: vm.max_map_count of ").$(mapCount).$(" is too low, check documentation to increase to ").$(mapMinCount).$(" or higher").$();
+                success = false;
+            }
+        }
+
+        long fileLimit = configuration.getCairoConfiguration().getFilesFacade().getFileLimit();
+        if (fileLimit < 0) {
+            log.advisoryW().$("cannot detect OS file-max parameter for the process, verification not performed");
+        } else {
+            log.advisoryW().$("file-max=").$(fileLimit).$();
+            if (fileLimit < fileMinCount) {
+                // This is recommended setting in the configuration
+                log.errorW().$("FATAL: process file-max of ").$(fileLimit).$(" is too low, check documentation to increase to ").$(fileMinCount).$(" or higher").$();
+                success = false;
+            }
+        }
+
+        if (!success) {
+            log.errorW().$("FATAL: OS configuration will make QuestDB unstable. To disable OS configuration check set environment variable QDB_CHECK_OS_PROCESS_LIMITS to false").$();
+        }
+
+        return success;
     }
 
     public static void deleteOrException(File file) {

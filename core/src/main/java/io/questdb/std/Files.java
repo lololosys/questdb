@@ -42,7 +42,6 @@ public final class Files {
     public static final int MAP_RO = 1;
     public static final int MAP_RW = 2;
     public static final char SEPARATOR;
-    public static final int RLIMIT_NOFILE = 7;
 
     static final AtomicLong OPEN_FILE_COUNT = new AtomicLong();
     private static LongHashSet openFds;
@@ -159,7 +158,7 @@ public final class Files {
         return OPEN_FILE_COUNT.get();
     }
 
-    public native static long getRLimit(int resource);
+    public native static long getFileLimit();
 
     public native static long getStdOutFd();
 

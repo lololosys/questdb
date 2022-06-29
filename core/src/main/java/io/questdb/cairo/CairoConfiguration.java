@@ -44,6 +44,8 @@ public interface CairoConfiguration {
     long O_DIRECT = 0x4000;
     ThreadLocal<Rnd> RANDOM = new ThreadLocal<>();
 
+    boolean checkOsProcessLimits();
+
     boolean enableTestFactories();
 
     int getAnalyticColumnPoolCapacity();

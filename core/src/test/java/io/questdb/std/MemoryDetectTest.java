@@ -28,7 +28,10 @@ import io.questdb.ServerMain;
 import io.questdb.log.Log;
 import io.questdb.log.LogFactory;
 import io.questdb.test.tools.TestUtils;
-import org.junit.*;
+import org.junit.Assert;
+import org.junit.Assume;
+import org.junit.BeforeClass;
+import org.junit.Test;
 
 import javax.management.*;
 import java.lang.management.ManagementFactory;
@@ -61,11 +64,37 @@ public class MemoryDetectTest {
     }
 
     @Test
-    public void testSetsUnsafeRssLimit() {
+    public void testOffHeapAllocationReevaluatesCheckThreshold() {
+        // Windows likely to fail to allocate big block of memory
+        Assume.assumeTrue(Os.type != Os.WINDOWS);
+
         try {
-            ServerMain.setTotalPhysicalMemorySize(LOG, 0L);
-            Assert.assertTrue("RSS limit evaluated", Unsafe.getRssMemoryLimit() < (1L << 40));
+            ServerMain.setRssMemoryLimit(LOG, 0L);
+            long fiveMib = 5L * (1 << 20);
+            long offHeapCheckThreshold = Unsafe.OFF_HEAP_CHECK_THRESHOLD;
+            long offheapAllocated = Unsafe.getOffHeapAllocated();
+            long size = offHeapCheckThreshold - offheapAllocated + fiveMib;
+
+            long ptr = 0L;
+            if (size > 0) {
+                boolean failedToAllocate = false;
+                try {
+                    ptr = Unsafe.malloc(size, MemoryTag.NATIVE_DEFAULT);
+                    Assert.assertEquals(offheapAllocated + size, Unsafe.getOffHeapAllocated());
+                } catch (OutOfMemoryError err) {
+                    // Nothing we can do OS, cannot allocate single big chunk sometimes
+                    failedToAllocate = true;
+                } finally {
+                    Unsafe.free(ptr, size, MemoryTag.NATIVE_DEFAULT);
+                }
+
+                if (!failedToAllocate) {
+                    Assert.assertEquals(offheapAllocated, Unsafe.getOffHeapAllocated());
+                    Assert.assertTrue(Unsafe.OFF_HEAP_CHECK_THRESHOLD > offHeapCheckThreshold);
+                }
+            }
         } finally {
+            // Restore global limit
             resetRssLimit();
         }
     }
@@ -73,7 +102,7 @@ public class MemoryDetectTest {
     @Test
     public void testResetsUnsafeRssLimit() {
         try {
-            ServerMain.setTotalPhysicalMemorySize(LOG, -1L);
+            ServerMain.setRssMemoryLimit(LOG, -1L);
             Assert.assertEquals("RSS limit reset", Long.MAX_VALUE, Unsafe.getRssMemoryLimit());
             Assert.assertTrue("RSS limit reset", Unsafe.OFF_HEAP_CHECK_THRESHOLD > (1L << 40));
         } finally {
@@ -82,10 +111,10 @@ public class MemoryDetectTest {
     }
 
     @Test
-    public void testSetsUnsafeRssLimitToConcreteValue() {
+    public void testSetsUnsafeRssLimit() {
         try {
-            ServerMain.setTotalPhysicalMemorySize(LOG, 1 << 30L);
-            Assert.assertEquals("RSS limit reset", 1 << 30L, Unsafe.getRssMemoryLimit());
+            ServerMain.setRssMemoryLimit(LOG, 0L);
+            Assert.assertTrue("RSS limit evaluated", Unsafe.getRssMemoryLimit() < (1L << 40));
         } finally {
             resetRssLimit();
         }
@@ -130,37 +159,11 @@ public class MemoryDetectTest {
     }
 
     @Test
-    public void testOffHeapAllocationReevaluatesCheckThreshold() {
-        // Windows likely to fail to allocate big block of memory
-        Assume.assumeTrue(Os.type != Os.WINDOWS);
-
+    public void testSetsUnsafeRssLimitToConcreteValue() {
         try {
-            ServerMain.setTotalPhysicalMemorySize(LOG, 0L);
-            long fiveMib = 5L * (1 << 20);
-            long offHeapCheckThreshold = Unsafe.OFF_HEAP_CHECK_THRESHOLD;
-            long offheapAllocated = Unsafe.getOffHeapAllocated();
-            long size = offHeapCheckThreshold - offheapAllocated + fiveMib;
-
-            long ptr = 0L;
-            if (size > 0) {
-                boolean failedToAllocate = false;
-                try {
-                    ptr = Unsafe.malloc(size, MemoryTag.NATIVE_DEFAULT);
-                    Assert.assertEquals(offheapAllocated + size, Unsafe.getOffHeapAllocated());
-                } catch (OutOfMemoryError err) {
-                    // Nothing we can do OS, cannot allocate single big chunk sometimes
-                    failedToAllocate = true;
-                } finally {
-                    Unsafe.free(ptr, size, MemoryTag.NATIVE_DEFAULT);
-                }
-
-                if (!failedToAllocate) {
-                    Assert.assertEquals(offheapAllocated, Unsafe.getOffHeapAllocated());
-                    Assert.assertTrue(Unsafe.OFF_HEAP_CHECK_THRESHOLD > offHeapCheckThreshold);
-                }
-            }
+            ServerMain.setRssMemoryLimit(LOG, 1 << 30L);
+            Assert.assertEquals("RSS limit reset", 1 << 30L, Unsafe.getRssMemoryLimit());
         } finally {
-            // Restore global limit
             resetRssLimit();
         }
     }

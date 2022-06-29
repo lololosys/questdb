@@ -357,7 +357,8 @@ public enum PropertyKey {
     CAIRO_RSS_MEMORY_LIMIT("cairo.rss.memory.limit.gib"),
     LINE_AUTO_CREATE_NEW_COLUMNS("line.auto.create.new.columns"),
     LINE_AUTO_CREATE_NEW_TABLES("line.auto.create.new.tables"),
-    CAIRO_SIMULATE_CRASH_ENABLED("cairo.enable.crash.simulation");
+    CAIRO_SIMULATE_CRASH_ENABLED("cairo.enable.crash.simulation"),
+    CAIRO_CHECK_OS_PROCESS_LIMITS("cairo.check.os.process.limits");
 
     private static final Map<String, PropertyKey> nameMapping;
     private final String propertyPath;

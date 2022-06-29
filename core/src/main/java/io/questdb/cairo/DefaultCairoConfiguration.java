@@ -70,6 +70,11 @@ public class DefaultCairoConfiguration implements CairoConfiguration {
     }
 
     @Override
+    public boolean checkOsProcessLimits() {
+        return true;
+    }
+
+    @Override
     public boolean enableTestFactories() {
         return true;
     }
