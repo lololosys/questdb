@@ -28,16 +28,16 @@ import io.questdb.cairo.CairoException;
 import io.questdb.std.str.LPSZ;
 import io.questdb.std.str.Path;
 
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class FilesFacadeImpl implements FilesFacade {
 
     public static final FilesFacade INSTANCE = new FilesFacadeImpl();
     public static final int _16M = 16 * 1024 * 1024;
     private long mapPageSize = 0;
-    private final AtomicInteger mapCount = new AtomicInteger();
-    private int openFileLimit = Integer.MAX_VALUE;
-    private int mapLimit = Integer.MAX_VALUE;
+    private final AtomicLong mapCount = new AtomicLong();
+    private long openFileLimit = Integer.MAX_VALUE;
+    private long mapLimit = Integer.MAX_VALUE;
 
     @Override
     public long append(long fd, long buf, int len) {
@@ -139,12 +139,12 @@ public class FilesFacadeImpl implements FilesFacade {
     }
 
     @Override
-    public void setMapLimit(int mapLimit) {
+    public void setMapLimit(long mapLimit) {
         this.mapLimit = mapLimit;
     }
 
     @Override
-    public void setOpenFileLimit(int fileLimit) {
+    public void setOpenFileLimit(long fileLimit) {
         openFileLimit = fileLimit;
     }
 

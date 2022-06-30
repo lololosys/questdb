@@ -401,6 +401,8 @@ public class PropServerConfiguration implements ServerConfiguration {
     private final boolean simulateCrashEnabled;
     private final long rssMemoryLimit;
     private final boolean checkOsProcessLimits;
+    private final long checkOsProcessLimitFiles;
+    private final long checkOsProcessLimitMaps;
 
     public PropServerConfiguration(
             String root,
@@ -434,6 +436,8 @@ public class PropServerConfiguration implements ServerConfiguration {
         this.simulateCrashEnabled = getBoolean(properties, env, PropertyKey.CAIRO_SIMULATE_CRASH_ENABLED, false);
         this.rssMemoryLimit = (long) (getDouble(properties, env, PropertyKey.CAIRO_RSS_MEMORY_LIMIT, 0) * 1024L * 1024L * 1024L);
         this.checkOsProcessLimits = getBoolean(properties, env, PropertyKey.CAIRO_CHECK_OS_PROCESS_LIMITS, true);
+        this.checkOsProcessLimitFiles = getLong(properties, env, PropertyKey.CAIRO_CHECK_OS_PROCESS_FILES_LIMIT, 100_000);
+        this.checkOsProcessLimitMaps = getLong(properties, env, PropertyKey.CAIRO_CHECK_OS_PROCESS_MAPS_LIMIT, 262_144);
 
         int cpuAvailable = Runtime.getRuntime().availableProcessors();
         int cpuUsed = 0;
@@ -1845,6 +1849,16 @@ public class PropServerConfiguration implements ServerConfiguration {
         @Override
         public BuildInformation getBuildInformation() {
             return buildInformation;
+        }
+
+        @Override
+        public long getCheckOsProcessLimitFiles() {
+            return checkOsProcessLimitFiles;
+        }
+
+        @Override
+        public long getCheckOsProcessLimitMaps() {
+            return checkOsProcessLimitMaps;
         }
 
         @Override

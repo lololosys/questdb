@@ -65,6 +65,10 @@ public interface CairoConfiguration {
 
     BuildInformation getBuildInformation();
 
+    long getCheckOsProcessLimitFiles();
+
+    long getCheckOsProcessLimitMaps();
+
     SqlExecutionCircuitBreakerConfiguration getCircuitBreakerConfiguration();
 
     int getColumnCastModelPoolCapacity();

@@ -117,12 +117,14 @@ public class ServerMain {
             throw sce;
         }
 
-        if (!checkOsProcessLimits(log, configuration.getCairoConfiguration(), 262_144, 100_000)) {
-            return;
+        CairoConfiguration cairoConfiguration = configuration.getCairoConfiguration();
+        if (!checkOsProcessLimits(log, cairoConfiguration, cairoConfiguration.getCheckOsProcessLimitMaps(), cairoConfiguration.getCheckOsProcessLimitFiles())) {
+            String errorMessage = "FATAL: OS configuration will make QuestDB unstable. To disable OS configuration check set environment variable QDB_CHECK_OS_PROCESS_LIMITS to false";
+            log.errorW().$(errorMessage).$();
+            throw new ServerConfigurationException(errorMessage);
         }
         setRssMemoryLimit(log, configuration.getCairoConfiguration().getRssMemoryLimit());
 
-        final CairoConfiguration cairoConfiguration = configuration.getCairoConfiguration();
 
         final boolean httpEnabled = configuration.getHttpServerConfiguration().isEnabled();
         final boolean httpReadOnly = configuration.getHttpServerConfiguration().getHttpContextConfiguration().readOnlySecurityContext();
@@ -293,6 +295,7 @@ public class ServerMain {
                 System.err.println(new Date() + " QuestDB is shutting down");
                 shutdownQuestDb(workerPool, instancesToClean);
                 System.err.println(new Date() + " QuestDB is down");
+                LogFactory.INSTANCE.waitClose();
             }));
         } catch (NetworkError e) {
             log.errorW().$((Sinkable) e).$();
@@ -338,7 +341,7 @@ public class ServerMain {
         }
     }
 
-    public static boolean checkOsProcessLimits(Log log, CairoConfiguration cairoConfiguration, int mapMinCount, int fileMinCount) {
+    public static boolean checkOsProcessLimits(Log log, CairoConfiguration cairoConfiguration, long mapMinCount, long fileMinCount) {
         if (!cairoConfiguration.checkOsProcessLimits()) {
             log.advisoryW().$("os file limit checks disabled in configuration.");
             return true;
@@ -353,10 +356,10 @@ public class ServerMain {
             log.advisoryW().$("vm.max_map_count=").$(mapCount).$();
             if (mapCount < mapMinCount) {
                 // This is recommended setting in the configuration
-                log.errorW().$("FATAL: vm.max_map_count of ").$(mapCount).$(" is too low, check documentation to increase to ").$(mapMinCount).$(" or higher").$();
+                log.errorW().$("FATAL: vm.max_map_count of [").$(mapCount).$("] is too low, check documentation and increase to at least [").$(mapMinCount).I$();
                 success = false;
             }
-            ff.setMapLimit(mapCount > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) mapCount);
+            ff.setMapLimit(mapCount);
         }
 
         long fileLimit = ff.getFileLimit();
@@ -366,14 +369,10 @@ public class ServerMain {
             log.advisoryW().$("file-max=").$(fileLimit).$();
             if (fileLimit < fileMinCount) {
                 // This is recommended setting in the configuration
-                log.errorW().$("FATAL: process file-max of ").$(fileLimit).$(" is too low, check documentation to increase to ").$(fileMinCount).$(" or higher").$();
+                log.errorW().$("FATAL: process file-max of [").$(fileLimit).$("] is too low, check documentation and increase to at least [").$(fileMinCount).I$();
                 success = false;
             }
-            ff.setOpenFileLimit(fileLimit > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) fileLimit);
-        }
-
-        if (!success) {
-            log.errorW().$("FATAL: OS configuration will make QuestDB unstable. To disable OS configuration check set environment variable QDB_CHECK_OS_PROCESS_LIMITS to false").$();
+            ff.setOpenFileLimit(fileLimit);
         }
 
         return success;
@@ -402,6 +401,7 @@ public class ServerMain {
             new ServerMain(args);
         } catch (ServerConfigurationException sce) {
             System.err.println(sce.getMessage());
+            LogFactory.INSTANCE.waitClose();
             System.exit(1);
         }
     }

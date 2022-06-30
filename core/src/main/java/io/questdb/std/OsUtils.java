@@ -52,8 +52,8 @@ public class OsUtils {
             long fd = ff.openRO(path);
             if (fd < 0) {
                 log.error().$("failed to open file [path=").$(path)
-                        .$(", errno").$(ff.errno())
-                        .$();
+                        .$(", errno=").$(ff.errno())
+                        .I$();
                 return null;
             }
 

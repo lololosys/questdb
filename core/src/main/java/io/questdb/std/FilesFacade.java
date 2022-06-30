@@ -64,9 +64,9 @@ public interface FilesFacade {
 
     int fsync(long fd);
 
-    void setMapLimit(int mapLimit);
+    void setMapLimit(long mapLimit);
 
-    void setOpenFileLimit(int fileLimit);
+    void setOpenFileLimit(long fileLimit);
 
     int sync();
 
