@@ -47,8 +47,7 @@ import io.questdb.std.datetime.millitime.Dates;
 import io.questdb.std.str.Path;
 import sun.misc.Signal;
 
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
+import javax.management.*;
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.*;
