@@ -53,21 +53,11 @@ public final class Unsafe {
     private static final AnonymousClassDefiner anonymousClassDefiner;
     private static final LongAdder[] COUNTERS = new LongAdder[MemoryTag.SIZE];
     private static final AtomicLong OFF_HEAP_ALLOCATED = new AtomicLong(0);
-    private final static long HEAP_BREATHING_SPACE = 1L << 29; // 512 GiB
+    private final static long HEAP_BREATHING_SPACE = 1L << 29; // 512 MiB
     private final static long REEVALUATE_HEAP_SPACE_INCREMENT = 1L << 26; // 128 MiB
     static volatile long OFF_HEAP_CHECK_THRESHOLD = Long.MAX_VALUE;
     private static long RSS_MEMORY_LIMIT = Long.MAX_VALUE;
     private static Log LOG;
-
-    public static long getRssMemoryLimit() {
-        return RSS_MEMORY_LIMIT;
-    }
-
-
-    public static void setRssMemoryLimit(long rssMemoryLimit) {
-        RSS_MEMORY_LIMIT = rssMemoryLimit;
-        OFF_HEAP_CHECK_THRESHOLD = Math.max(0, rssMemoryLimit - Runtime.getRuntime().maxMemory() + Runtime.getRuntime().totalMemory()); // Start checking Java heap limit when Malloc exceeds rssMemoryLimit - (java heap max size)
-    }
 
     static {
         try {
@@ -161,6 +151,10 @@ public final class Unsafe {
         LOG = LogFactory.getLog("unsafe-mem");
     }
 
+    public static long getRssMemoryLimit() {
+        return RSS_MEMORY_LIMIT;
+    }
+
     public static long arrayGetVolatile(long[] array, int index) {
         assert index > -1 && index < array.length;
         return Unsafe.getUnsafe().getLongVolatile(array, LONG_OFFSET + ((long) index << LONG_SCALE));
@@ -232,6 +226,11 @@ public final class Unsafe {
     public static long getMemUsedByTag(int memoryTag) {
         assert memoryTag >= 0 && memoryTag < MemoryTag.SIZE;
         return COUNTERS[memoryTag].sum();
+    }
+
+    public static void setRssMemoryLimit(long rssMemoryLimit) {
+        RSS_MEMORY_LIMIT = rssMemoryLimit;
+        OFF_HEAP_CHECK_THRESHOLD = Math.max(0, rssMemoryLimit - Runtime.getRuntime().maxMemory() + Runtime.getRuntime().totalMemory()); // Start checking Java heap limit when Malloc exceeds rssMemoryLimit - (java heap max size)
     }
 
     public static sun.misc.Unsafe getUnsafe() {

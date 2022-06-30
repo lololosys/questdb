@@ -24,11 +24,16 @@
 
 package io.questdb.std;
 
+import io.questdb.DefaultServerConfiguration;
+import io.questdb.ServerMain;
 import io.questdb.log.Log;
 import io.questdb.log.LogFactory;
+import io.questdb.std.str.LPSZ;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
+
+import static io.questdb.test.tools.TestUtils.assertMemoryLeak;
 
 public class OsUtilsTest {
     static final Log LOG = LogFactory.getLog(OsUtils.class);
@@ -51,5 +56,52 @@ public class OsUtilsTest {
         Assert.assertTrue(mapCount > 0);
 
         System.out.println(mapCount);
+    }
+
+    @Test
+    public void testMapLimitLinuxFails() throws Exception {
+        assertMemoryLeak(() -> {
+            Assume.assumeTrue(Os.type == Os.LINUX_AMD64 || Os.type == Os.LINUX_ARM64);
+
+            FilesFacade ff = new FilesFacadeImpl() {
+                @Override
+                public long openRO(LPSZ name) {
+                    return -1L;
+                }
+            };
+
+            long mapCount = OsUtils.getMaxMapCount(LOG, ff);
+            Assert.assertEquals(-1, mapCount);
+        });
+    }
+
+    @Test
+    public void testServerMainFailsConfiguration() throws Exception {
+        assertMemoryLeak(() -> {
+            Assume.assumeTrue(Os.type == Os.LINUX_AMD64 || Os.type == Os.LINUX_ARM64);
+
+            var configuraton = new DefaultServerConfiguration("");
+            FilesFacade ff = configuraton.getCairoConfiguration().getFilesFacade();
+            boolean success = ServerMain.checkOsProcessLimits(LOG, configuraton.getCairoConfiguration(), Integer.MAX_VALUE, Integer.MAX_VALUE);
+
+            Assert.assertFalse(success);
+            Assert.assertEquals(ff.getFileLimit(), ff.getOpenFileCapacity() + ff.getOpenFileCount());
+            Assert.assertEquals(OsUtils.getMaxMapCount(LOG, ff), ff.getMapCapacity());
+        });
+    }
+
+    @Test
+    public void testServerMainSetsConfigurations() throws Exception {
+        assertMemoryLeak(() -> {
+            Assume.assumeTrue(Os.type == Os.LINUX_AMD64 || Os.type == Os.LINUX_ARM64);
+
+            var configuraton = new DefaultServerConfiguration("");
+            boolean success = ServerMain.checkOsProcessLimits(LOG, configuraton.getCairoConfiguration(), 10, 10);
+            Assert.assertTrue(success);
+
+            FilesFacade ff = configuraton.getCairoConfiguration().getFilesFacade();
+            Assert.assertEquals(ff.getFileLimit(), ff.getOpenFileCapacity() + ff.getOpenFileCount());
+            Assert.assertEquals(OsUtils.getMaxMapCount(LOG, ff), ff.getMapCapacity());
+        });
     }
 }

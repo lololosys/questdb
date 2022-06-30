@@ -63,9 +63,12 @@ public class OsUtils {
                 sink.put((char)Unsafe.getUnsafe().getByte(addr + i));
             }
 
+            ff.close(fd);
             return sink.subSequence(0, sink.length() - 1);
         } finally {
-            Unsafe.free(addr, ff.getPageSize(), MemoryTag.NATIVE_DEFAULT);
+            if (addr != 0L) {
+                Unsafe.free(addr, ff.getPageSize(), MemoryTag.NATIVE_DEFAULT);
+            }
         }
     }
 

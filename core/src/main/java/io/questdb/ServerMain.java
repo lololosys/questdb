@@ -47,7 +47,8 @@ import io.questdb.std.datetime.millitime.Dates;
 import io.questdb.std.str.Path;
 import sun.misc.Signal;
 
-import javax.management.*;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.net.*;
@@ -337,14 +338,15 @@ public class ServerMain {
         }
     }
 
-    private boolean checkOsProcessLimits(Log log, CairoConfiguration cairoConfiguration, long mapMinCount, long fileMinCount) {
+    public static boolean checkOsProcessLimits(Log log, CairoConfiguration cairoConfiguration, int mapMinCount, int fileMinCount) {
         if (!cairoConfiguration.checkOsProcessLimits()) {
             log.advisoryW().$("os file limit checks disabled in configuration.");
             return true;
         }
 
         boolean success = true;
-        long mapCount = OsUtils.getMaxMapCount(log, configuration.getCairoConfiguration().getFilesFacade());
+        FilesFacade ff = cairoConfiguration.getFilesFacade();
+        long mapCount = OsUtils.getMaxMapCount(log, ff);
         if (mapCount < 0) {
             log.advisoryW().$("cannot detect OS vm.max_map_count parameter, verification not performed");
         } else {
@@ -354,9 +356,10 @@ public class ServerMain {
                 log.errorW().$("FATAL: vm.max_map_count of ").$(mapCount).$(" is too low, check documentation to increase to ").$(mapMinCount).$(" or higher").$();
                 success = false;
             }
+            ff.setMapLimit(mapCount > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) mapCount);
         }
 
-        long fileLimit = configuration.getCairoConfiguration().getFilesFacade().getFileLimit();
+        long fileLimit = ff.getFileLimit();
         if (fileLimit < 0) {
             log.advisoryW().$("cannot detect OS file-max parameter for the process, verification not performed");
         } else {
@@ -366,6 +369,7 @@ public class ServerMain {
                 log.errorW().$("FATAL: process file-max of ").$(fileLimit).$(" is too low, check documentation to increase to ").$(fileMinCount).$(" or higher").$();
                 success = false;
             }
+            ff.setOpenFileLimit(fileLimit > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) fileLimit);
         }
 
         if (!success) {

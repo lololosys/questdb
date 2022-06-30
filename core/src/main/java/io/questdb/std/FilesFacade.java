@@ -56,9 +56,17 @@ public interface FilesFacade {
 
     long getFileLimit();
 
+    long getMapCapacity();
+
+    long getOpenFileCapacity();
+
     int msync(long addr, long len, boolean async);
 
     int fsync(long fd);
+
+    void setMapLimit(int mapLimit);
+
+    void setOpenFileLimit(int fileLimit);
 
     int sync();
 
