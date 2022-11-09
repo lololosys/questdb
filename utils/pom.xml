@@ -53,7 +53,7 @@
     <dependency>
       <groupId>org.questdb</groupId>
       <artifactId>questdb</artifactId>
-      <version>6.4.3-SNAPSHOT</version>
+      <version>6.5.3-jdk8</version>
     </dependency>
   </dependencies>
 
