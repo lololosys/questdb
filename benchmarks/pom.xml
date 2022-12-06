@@ -83,7 +83,7 @@
         <!--
             JMH version to use with this project.
           -->
-        <jmh.version>1.22</jmh.version>
+        <jmh.version>1.36</jmh.version>
 
         <!--
             Java source/target to use for compilation.
@@ -128,8 +128,7 @@
                         <configuration>
                             <finalName>${uberjar.name}</finalName>
                             <transformers>
-                                <transformer
-                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>org.openjdk.jmh.Main</mainClass>
                                 </transformer>
                             </transformers>
